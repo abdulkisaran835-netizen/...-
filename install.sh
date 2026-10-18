@@ -1,0 +1,29 @@
+vncserver -kill :1 2>/dev/null
+rm -rf ~/workspace/freeroot /tmp/.X11-unix /tmp/.X1-lock
+
+cd ~/workspace
+git clone https://github.com/foxytouxxx/freeroot.git
+cd freeroot
+
+nix-env -iA nixpkgs.wget
+export PATH="$HOME/.nix-profile/bin:$PATH"
+
+chmod +x root.sh
+echo "yes" | bash root.sh
+
+./usr/local/bin/proot --rootfs="." -0 -w /root -b /dev -b /sys -b /proc -b /etc/resolv.conf /bin/bash -c "
+  apt-get update && apt-get install -y fluxbox xterm dbus-x11 websockify tigervnc-standalone-server novnc
+  mkdir -p ~/.vnc
+  echo '#!/bin/sh' > ~/.vnc/xstartup
+  echo 'unset SESSION_MANAGER' >> ~/.vnc/xstartup
+  echo 'unset DBUS_SESSION_BUS_ADDRESS' >> ~/.vnc/xstartup
+  echo 'dbus-launch --exit-with-session &' >> ~/.vnc/xstartup
+  echo 'fluxbox &' >> ~/.vnc/xstartup
+  chmod +x ~/.vnc/xstartup
+"
+
+./usr/local/bin/proot --rootfs="." -0 -w /root -b /dev -b /sys -b /proc -b /etc/resolv.conf /bin/bash -c "
+  mkdir -p ~/.vnc
+  printf 'lapioplays\nlapioplays\nn\n' | vncserver :1 -geometry 1280x720 -depth 16
+  websockify --web=/usr/share/novnc/ 3000 0.0.0.0:5901
+"
